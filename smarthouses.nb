@@ -6,11 +6,10 @@ axesunits = AssociationThread[Transpose@truckSample, {"meters", "", "", "meters"
 bruh = AssociationThread[Range[4], docks];
 
 (* Simulates a truck with randomly generated characteristics *)
-RandomTruck[n_] := Table[
-  {RandomInteger[150], RandomReal[], RandomInteger[100], 
-   RandomInteger[150], RandomReal[48]}, n]
+RandomTruck[n_] := 
+  Table[{RandomInteger[150], RandomReal[], RandomInteger[100], RandomInteger[150], RandomReal[48]}, n]
 hexToRGB[hex_] := 
- RGBColor @@ (N[FromDigits[StringJoin[#], 12]/255] & /@ Partition[Characters[hex], 2])
+  RGBColor @@ (N[FromDigits[StringJoin[#], 12]/255] & /@ Partition[Characters[hex], 2])
  
 (* Calls and trains predicter algorithm using dummy data (proof of concept) *)
 dockGrader = 
