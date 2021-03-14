@@ -1,0 +1,118 @@
+(* formatting related variables *)
+varlabels = {"Dock to Storage Location", "Worker Availability","Dock Safety Rating", "Proximity to Adjacent Dock", "Expected Delay"};
+docks = {"A", "B", "C", "D"};
+titles = AssociationThread[Transpose@truckSample, varlabels];
+axesunits = AssociationThread[Transpose@truckSample, {"meters", "", "", "meters", "min"}];
+bruh = AssociationThread[Range[4], docks];
+
+(* Simulates a truck with randomly generated characteristics *)
+RandomTruck[n_] := Table[
+  {RandomInteger[150], RandomReal[], RandomInteger[100], 
+   RandomInteger[150], RandomReal[48]}, n]
+hexToRGB[hex_] := 
+ RGBColor @@ (N[FromDigits[StringJoin[#], 12]/255] & /@ Partition[Characters[hex], 2])
+ 
+(* Calls and trains predicter algorithm using dummy data (proof of concept) *)
+dockGrader = 
+  Predict[Table[{(150/20) x, (20 - x)/20, 100 (20 - x)/20, 150 (20 - x)/20, (48/20) x} -> 5 (20 - x), {x, 0, 20}]];
+  
+(* Sample truck when entering the warehouse *)
+truckSample = {{35, 0.25, 75, 40, 10}, {100, 0.55, 20, 25, 24}, {10, 0.65, 85, 60, 5}, {110, 0.3, 15, 125, 42}};
+
+(* Creation of main dashboard *)
+Column[{
+  Row[BarChart[#, 
+      ChartStyle -> (hexToRGB[#] & /@ {"17beeb", "fad8d6", "cd5334", 
+          "edb88b"}), ChartLabels -> docks, PlotLabel -> titles[#], 
+      ImageSize -> 250, GridLines -> Automatic, 
+      AxesLabel -> {"", axesunits[#]}] & /@ Transpose[truckSample]],
+  Dataset[
+   Transpose@
+    Partition[
+     Flatten@{{"Best Worker Availability", "Best Safety Rating", 
+        "Best Proximity", "Lowest Dock to Storage Location", 
+        "Lowest Delay"}, 
+       bruh[#] & /@ 
+        Flatten[Ordering[#, -1] & /@ 
+          Transpose[truckSample][[{2, 3, 4}]]], 
+       bruh[#] & /@ 
+        Flatten[Ordering[#, 1] & /@ 
+          Transpose[truckSample][[{1, 5}]]]}, 5]],
+  Dataset[{Prepend[docks, ""], 
+    Prepend[dockGrader[#] & /@ truckSample, 
+     "Overall Availability Metric"]}],
+  Style[Row@{"Optimal Dock Placement: ", 
+     First@docks[[Ordering[dockGrader[#] & /@ truckSample, -1]]]}, 35,
+    Bold, FontFamily -> "Arial Rounded MT"],
+  BarChart[dockGrader[#] & /@ truckSample, ChartLabels -> docks, 
+   ChartStyle -> (hexToRGB[#] & /@ {"17beeb", "fad8d6", "cd5334", 
+       "edb88b"}), ImageSize -> Medium, GridLines -> Automatic, 
+   AxesLabel -> {"Docks", "Availability Metric (out of 100)"}]
+  }]
+  
+(* Security footage processing *)
+styleSingleDetection[
+ color_] := {#Probability, color, FaceForm[], 
+  EdgeForm[{AbsoluteThickness[4]}], #BoundingBox, 
+   Inset[Style[#Concept, FontSize -> 20, Black], Last[#BoundingBox], 
+    Scaled[{1, 1}], Background -> GrayLevel[1, .8]]} &
+
+styleDetection[res_] := 
+  BlockRandom[
+   Drop[SortBy[First][
+     Flatten[Values@
+       GroupBy[Normal[res], #Concept &, 
+        With[{c = RandomColor[]}, Map[styleSingleDetection[c]][#]] &],
+       1]], None, 1], RandomSeeding -> 15];
+       
+HighlightImage[image, 
+  styleDetection[ImageContents[#, AcceptanceThreshold -> .5]] &
+  ]
+
+(* Heatmaps (density plots) using random sinusoidal data to simulate workers moving around in a dock *)
+heatmaps = 
+  Table[DensityPlot[
+    Evaluate[Sum[Sin[RandomReal[3, 2] . {x, y}], {5}]], {x, 0, 5}, {y,
+      0, 5}, ColorFunction -> "SunsetColors", PlotPoints -> 50, 
+    Mesh -> 10, Frame -> False, ImageSize -> Medium], {c, 1, 3}];
+Column[{Style["Areas and times of highest traffic", 35, Bold, 
+   FontFamily -> "Arial Rounded MT"]}]
+
+(* Group of heatmaps, animated throughout a morning *)
+heatmapanim = Animate[Column[{Row[{
+       Column[{Style["Dock A", 22, Bold, 
+          FontFamily -> "Arial Rounded MT"], 
+         Style[DateString[
+           TimeObject[10 t], {"Hour24", ":", "Minute"}], 18, 
+          Darker@Gray, FontFamily -> "Arial Rounded MT"], 
+         DensityPlot[
+          Evaluate[Sum[Sin[RandomReal[2, 2] . {t x, y}], {5}]], {x, 0,
+            5}, {y, 0, 5}, ColorFunction -> "SunsetColors", 
+          PlotPoints -> 50, Mesh -> 10, Frame -> False, 
+          ImageSize -> Medium]}],
+       Column[{Style["Dock B", 22, Bold, 
+          FontFamily -> "Arial Rounded MT"], 
+         DensityPlot[
+          Evaluate[Sum[Sin[RandomReal[2, 2] . {x, t y}], {5}]], {x, 0,
+            5}, {y, 0, 5}, ColorFunction -> "SunsetColors", 
+          PlotPoints -> 50, Mesh -> 10, Frame -> False, 
+          ImageSize -> Medium]}]}],
+     Column[{Row[{
+         Column[{Style["Dock C", 22, Bold, 
+            FontFamily -> "Arial Rounded MT"], 
+           DensityPlot[
+            Evaluate[Sum[Sin[RandomReal[3, 2] . {t x, y}], {5}]], {x, 
+             0, 5}, {y, 0, 5}, ColorFunction -> "SunsetColors", 
+            PlotPoints -> 50, Mesh -> 10, Frame -> False, 
+            ImageSize -> Medium]}],
+         Column[{Style["Dock D", 22, Bold, 
+            FontFamily -> "Arial Rounded MT"], 
+           DensityPlot[
+            Evaluate[Sum[Sin[RandomReal[2, 2] . {t x, y}], {5}]], {x, 
+             0, 5}, {y, 0, 5}, ColorFunction -> "SunsetColors", 
+            PlotPoints -> 50, Mesh -> 10, Frame -> False, 
+            ImageSize -> Medium]}]}]}]}],
+   {{t, 1, "Time"}, 0.5, 1, 0.05}, ControlPlacement -> Top];
+
+(* Exporting animation *)
+Export["heatmapanim.mov", heatmapanim]
